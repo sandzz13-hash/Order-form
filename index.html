@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Form</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Order form</h1>
+  <p class="sub">Choose your products and quantities, then send your order.</p>
+
+  <form id="orderForm">
+    <label for="doctor">Doctor / practice name</label>
+    <input id="doctor" name="doctor" required>
+
+    <label for="contact">Phone or email</label>
+    <input id="contact" name="contact" required>
+
+    <label for="province">Province</label>
+    <select id="province" name="province" required>
+      <option value="">Select a province</option>
+      <option>Eastern Cape</option>
+      <option>Free State</option>
+      <option>Gauteng</option>
+      <option>KwaZulu-Natal</option>
+      <option>Limpopo</option>
+      <option>Mpumalanga</option>
+      <option>North West</option>
+      <option>Northern Cape</option>
+      <option>Western Cape</option>
+    </select>
+    <div id="shipNote" role="status"></div>
+
+    <label>Products</label>
+    <div id="lines"></div>
+    <button type="button" class="ghost" id="addLine">+ Add another product</button>
+
+    <label for="note">Patient name / note (optional)</label>
+    <textarea id="note" name="note" rows="3"></textarea>
+
+    <button type="submit" class="primary">Send order</button>
+    <div id="status" role="status"></div>
+  </form>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
