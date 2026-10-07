@@ -33,6 +33,18 @@
     </select>
     <div id="shipNote" role="status"></div>
 
+    <div id="courierBox" hidden>
+      <h2>Courier delivery details</h2>
+      <label for="courierName">Name of person receiving the parcel</label>
+      <input id="courierName" name="courierName">
+
+      <label for="courierCell">Cell number</label>
+      <input id="courierCell" name="courierCell" type="tel">
+
+      <label for="courierAddress">Delivery address</label>
+      <textarea id="courierAddress" name="courierAddress" rows="3"></textarea>
+    </div>
+
     <label>Products</label>
     <div id="lines"></div>
     <button type="button" class="ghost" id="addLine">+ Add another product</button>

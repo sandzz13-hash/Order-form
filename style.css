@@ -16,3 +16,6 @@ button { font:inherit; border:0; border-radius:6px; padding:.65rem 1rem; cursor:
 #shipNote { margin-top:.5rem; padding:.6rem .8rem; border-radius:6px; background:#fff8e1; border:1px solid #f0d98a; display:none; }
 #shipNote.free { background:#e8f5ee; border-color:#a7d7b9; }
 .ok { color:#166534; } .err { color:#b91c1c; }
+
+#courierBox { margin-top:1rem; padding:0 1rem 1rem; border:1px solid var(--line); border-radius:8px; background:#fff; }
+#courierBox h2 { font-size:1.1rem; margin:1rem 0 0; }
