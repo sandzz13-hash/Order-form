@@ -8,6 +8,7 @@
 </head>
 <body>
 <main>
+  <img src="logo.png" alt="Company logo" class="logo">
   <h1>Order form</h1>
   <p class="sub">Choose your products and quantities, then send your order.</p>
 
@@ -49,12 +50,47 @@
     <div id="lines"></div>
     <button type="button" class="ghost" id="addLine">+ Add another product</button>
 
+    <!-- NEW: running total -->
+    <div id="summary" class="summary">
+      <div class="sum-row"><span>Subtotal</span><span id="subtotal">R0.00</span></div>
+      <div class="sum-row"><span>Shipping</span><span id="shipping">R0.00</span></div>
+      <div class="sum-row total"><span>Total</span><span id="total">R0.00</span></div>
+    </div>
+
     <label for="note">Patient name / note (optional)</label>
     <textarea id="note" name="note" rows="3"></textarea>
+
+    <!-- NEW: optional copy of the order -->
+    <label for="copyEmail">Your email (optional)</label>
+    <input id="copyEmail" name="copyEmail" type="email" placeholder="you@example.com">
+    <label class="check" id="copyWrap" hidden>
+      <input type="checkbox" id="sendCopy" name="sendCopy">
+      Send me a copy of this order
+    </label>
 
     <button type="submit" class="primary">Send order</button>
     <div id="status" role="status"></div>
   </form>
+
+  <!-- NEW: quote shown after the order is sent -->
+  <section id="quote" hidden>
+    <img src="logo.png" alt="Company logo" class="logo">
+    <h2>Your quote</h2>
+    <p id="quoteHint" class="ok"></p>
+    <p id="quoteMeta"></p>
+    <table id="quoteTable">
+      <thead>
+        <tr><th>Product</th><th>Qty</th><th>Price</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="quoteTotals"></div>
+    <div class="quote-actions">
+      <button type="button" class="primary" id="downloadQuote">Download / print quote</button>
+      <button type="button" class="ghost" id="emailQuote">Email this to myself</button>
+      <button type="button" class="ghost" id="newOrder">Place a new order</button>
+    </div>
+  </section>
 </main>
 
 <script src="script.js"></script>
