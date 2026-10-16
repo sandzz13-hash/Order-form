@@ -19,3 +19,30 @@ button { font:inherit; border:0; border-radius:6px; padding:.65rem 1rem; cursor:
 
 #courierBox { margin-top:1rem; padding:0 1rem 1rem; border:1px solid var(--line); border-radius:8px; background:#fff; }
 #courierBox h2 { font-size:1.1rem; margin:1rem 0 0; }
+/* ---- Add this to the BOTTOM of your style.css ---- */
+
+/* Makes the "hidden" attribute always win, so the form/quote switch works */
+[hidden] { display: none !important; }
+
+/* Logo */
+.logo { display: block; max-width: 180px; height: auto; margin: 0 auto 16px; }
+
+/* Running total */
+.summary { margin: 16px 0; padding: 12px 14px; border: 1px solid #ddd; border-radius: 8px; }
+.sum-row { display: flex; justify-content: space-between; padding: 4px 0; }
+.sum-row.total { font-weight: 700; font-size: 1.1em; border-top: 1px solid #ddd; margin-top: 6px; padding-top: 8px; }
+
+/* "Send me a copy" checkbox */
+label.check { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+label.check input { width: auto; margin: 0; }
+
+/* Quote */
+#quote table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+#quote th, #quote td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #ddd; }
+#quote th:nth-child(n+2), #quote td:nth-child(n+2) { text-align: right; }
+.quote-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+/* When printing or saving as PDF, hide the buttons */
+@media print {
+  .quote-actions { display: none !important; }
+}

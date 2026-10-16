@@ -114,26 +114,50 @@ const PRODUCTS = [
 ];
 // -----------------------
 
+const form = document.getElementById("orderForm");
 const lines = document.getElementById("lines");
 const provinceEl = document.getElementById("province");
 const shipNote = document.getElementById("shipNote");
 const courierBox = document.getElementById("courierBox");
 const courierFields = courierBox.querySelectorAll("input, textarea");
+const copyEmail = document.getElementById("copyEmail");
+const copyWrap = document.getElementById("copyWrap");
+const sendCopy = document.getElementById("sendCopy");
+const headEls = document.querySelectorAll("main > .logo, main > h1, main > .sub");
+const quoteEl = document.getElementById("quote");
+
+const money = n => "R" + n.toLocaleString("en-ZA");
+
+// Reads the product lines on the form (ignores empty or zero-quantity lines)
+function getOrderLines() {
+  return [...lines.children].map(r => {
+    const code = r.querySelector("select").value;
+    const qty = parseInt(r.querySelector("input").value, 10) || 0;
+    const p = PRODUCTS.find(x => x.code === code);
+    return { code, qty, p };
+  }).filter(l => l.p && l.qty > 0);
+}
 
 function calcTotals() {
-  let subtotal = 0;
-  [...lines.children].forEach(r => {
-    const p = PRODUCTS.find(x => x.code === r.querySelector("select").value);
-    const qty = parseInt(r.querySelector("input").value, 10) || 0;
-    if (p) subtotal += p.price * qty;
-  });
+  const subtotal = getOrderLines().reduce((sum, l) => sum + l.p.price * l.qty, 0);
   const province = provinceEl.value;
   const shipping = (province && province !== "Gauteng" && subtotal < FREE_SHIPPING_FROM) ? SHIPPING_FEE : 0;
   return { subtotal, shipping, total: subtotal + shipping, province };
 }
 
 function updateNote() {
-  const { shipping, province } = calcTotals();
+  const { subtotal, shipping, total, province } = calcTotals();
+
+  // Running total
+  document.getElementById("subtotal").textContent = money(subtotal);
+  document.getElementById("shipping").textContent = shipping ? money(shipping) : "Free";
+  document.getElementById("total").textContent = money(total);
+
+  // "Send me a copy" only appears once an email has been typed
+  const hasEmail = copyEmail.value.trim() !== "";
+  copyWrap.hidden = !hasEmail;
+  if (!hasEmail) sendCopy.checked = false;
+
   shipNote.className = "";
 
   // Courier details are only needed when a shipping fee applies
@@ -150,8 +174,8 @@ function updateNote() {
     shipNote.textContent = "A shipping fee of R" + SHIPPING_FEE + " is added to orders outside Gauteng. Orders of R" + FREE_SHIPPING_FROM + " or more ship free.";
   }
 }
-document.getElementById("orderForm").addEventListener("input", updateNote);
-document.getElementById("orderForm").addEventListener("change", updateNote);
+form.addEventListener("input", updateNote);
+form.addEventListener("change", updateNote);
 
 function addLine() {
   const row = document.createElement("div");
@@ -167,36 +191,89 @@ function addLine() {
   lines.appendChild(row);
 }
 addLine();
+updateNote();
 document.getElementById("addLine").onclick = addLine;
 
-document.getElementById("orderForm").addEventListener("submit", async (e) => {
+// ---- Quote ----
+let lastQuote = null;
+
+function showQuote(q) {
+  lastQuote = q;
+  document.getElementById("quoteHint").textContent = q.wantsCopy
+    ? "Your order has been sent. Tap \"Email this to myself\" below to send yourself a copy."
+    : "Your order has been sent. We will confirm with you shortly.";
+  document.getElementById("quoteMeta").textContent =
+    "Prepared for " + q.doctor + " on " + new Date().toLocaleDateString("en-ZA");
+  document.querySelector("#quoteTable tbody").innerHTML = q.items.map(l =>
+    `<tr><td>${l.code} - ${l.p.name}</td><td>${l.qty}</td><td>${money(l.p.price * l.qty)}</td></tr>`
+  ).join("");
+  document.getElementById("quoteTotals").innerHTML =
+    `<div class="sum-row"><span>Subtotal</span><span>${money(q.totals.subtotal)}</span></div>
+     <div class="sum-row"><span>Shipping</span><span>${q.totals.shipping ? money(q.totals.shipping) : "Free"}</span></div>
+     <div class="sum-row total"><span>Total</span><span>${money(q.totals.total)}</span></div>`;
+  headEls.forEach(el => el.hidden = true);
+  form.hidden = true;
+  quoteEl.hidden = false;
+  window.scrollTo(0, 0);
+}
+
+document.getElementById("downloadQuote").onclick = () => window.print(); // choose "Save as PDF" in the print window
+
+document.getElementById("emailQuote").onclick = () => {
+  const q = lastQuote;
+  if (!q) return;
+  const body = [
+    "Quote for " + q.doctor,
+    "",
+    ...q.items.map(l => `${l.qty} x ${l.code} - ${l.p.name}: ${money(l.p.price * l.qty)}`),
+    "",
+    "Subtotal: " + money(q.totals.subtotal),
+    "Shipping: " + (q.totals.shipping ? money(q.totals.shipping) : "Free"),
+    "Total: " + money(q.totals.total)
+  ].join("\n");
+  location.href = "mailto:" + q.email + "?subject=" + encodeURIComponent("Your order quote") +
+    "&body=" + encodeURIComponent(body);
+};
+
+document.getElementById("newOrder").onclick = () => {
+  quoteEl.hidden = true;
+  headEls.forEach(el => el.hidden = false);
+  form.hidden = false;
+  document.getElementById("status").textContent = "";
+  window.scrollTo(0, 0);
+};
+
+// ---- Submit ----
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const status = document.getElementById("status");
-  const items = [...lines.children].map(r => {
-    const code = r.querySelector("select").value;
-    const qty = r.querySelector("input").value;
-    const p = PRODUCTS.find(x => x.code === code);
-    return `${qty} x ${code} - ${p ? p.name : ""}`;
-  });
+  const orderLines = getOrderLines();
+  const items = orderLines.map(l => `${l.qty} x ${l.code} - ${l.p.name}`);
   const totals = calcTotals();
+  const email = copyEmail.value.trim();
   const data = {
     access_key: ACCESS_KEY,
     subject: "New order from " + document.getElementById("doctor").value,
     doctor: document.getElementById("doctor").value,
     contact: document.getElementById("contact").value,
     province: provinceEl.value,
-    subtotal: "R" + totals.subtotal.toLocaleString("en-ZA"),
-    shipping: totals.shipping ? "R" + totals.shipping : "None",
-    total: "R" + totals.total.toLocaleString("en-ZA"),
+    subtotal: money(totals.subtotal),
+    shipping: totals.shipping ? money(totals.shipping) : "None",
+    total: money(totals.total),
     order: items.join("\n"),
     note: document.getElementById("note").value
   };
   if (totals.shipping) {
-  data.courier_name = document.getElementById("courierName").value;
-  data.courier_cell = document.getElementById("courierCell").value;
-  data.courier_address = document.getElementById("courierAddress").value;
-}
-status.textContent = "Sending...";
+    data.courier_name = document.getElementById("courierName").value;
+    data.courier_cell = document.getElementById("courierCell").value;
+    data.courier_address = document.getElementById("courierAddress").value;
+  }
+  if (email) {
+    data.doctor_email = email;
+    data.replyto = email; // so replying to the order email goes to the doctor
+    data.copy_requested = sendCopy.checked ? "Yes" : "No";
+  }
+  status.textContent = "Sending...";
   status.className = "";
   try {
     const res = await fetch("https://api.web3forms.com/submit", {
@@ -206,9 +283,14 @@ status.textContent = "Sending...";
     });
     const result = await res.json();
     if (!result.success) throw new Error();
-    status.textContent = "Order sent. We will confirm with you shortly.";
-    status.className = "ok";
-    e.target.reset();
+    showQuote({
+      doctor: data.doctor,
+      email,
+      wantsCopy: !!email && sendCopy.checked,
+      items: orderLines,
+      totals
+    });
+    form.reset();
     lines.innerHTML = "";
     addLine();
     updateNote();
