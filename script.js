@@ -3,6 +3,7 @@ const ACCESS_KEY = "494eb307-b7bb-449a-8008-7a515657aca2"; // Web3Forms public a
 const SHOW_PRICES = false; // set to true to show prices in the dropdown
 const SHIPPING_FEE = 200;        // charged outside Gauteng
 const FREE_SHIPPING_FROM = 2500; // orders at or above this ship free
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbxn0OTWva_l8RrcMXAjQlP3ENVwrX-LVlr2h4Q9f1nKAUwHQLWn6DBTkxagcz11AcwV/exec"; // paste your Google Apps Script web app URL here (leave empty to skip saving to the sheet)
 const PRODUCTS = [
   { code: "R3010", name: "Implant", price: 1500 },
   { code: "R3012", name: "Implant", price: 1500 },
@@ -128,6 +129,13 @@ const quoteEl = document.getElementById("quote");
 
 const money = n => "R" + n.toLocaleString("en-ZA");
 
+// e.g. ORD-20261016-4821
+function makeOrderRef() {
+  const d = new Date();
+  const ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+  return "ORD-" + ymd + "-" + Math.floor(1000 + Math.random() * 9000);
+}
+
 // Reads the product lines on the form (ignores empty or zero-quantity lines)
 function getOrderLines() {
   return [...lines.children].map(r => {
@@ -203,7 +211,7 @@ function showQuote(q) {
     ? "Your order has been sent. Tap \"Email this to myself\" below to send yourself a copy."
     : "Your order has been sent. We will confirm with you shortly.";
   document.getElementById("quoteMeta").textContent =
-    "Prepared for " + q.doctor + " on " + new Date().toLocaleDateString("en-ZA");
+    "Order " + q.orderRef + " - prepared for " + q.doctor + " on " + new Date().toLocaleDateString("en-ZA");
   document.querySelector("#quoteTable tbody").innerHTML = q.items.map(l =>
     `<tr><td>${l.code} - ${l.p.name}</td><td>${l.qty}</td><td>${money(l.p.price * l.qty)}</td></tr>`
   ).join("");
@@ -223,7 +231,7 @@ document.getElementById("emailQuote").onclick = () => {
   const q = lastQuote;
   if (!q) return;
   const body = [
-    "Quote for " + q.doctor,
+    "Quote for " + q.doctor + " (order " + q.orderRef + ")",
     "",
     ...q.items.map(l => `${l.qty} x ${l.code} - ${l.p.name}: ${money(l.p.price * l.qty)}`),
     "",
@@ -251,9 +259,11 @@ form.addEventListener("submit", async (e) => {
   const items = orderLines.map(l => `${l.qty} x ${l.code} - ${l.p.name}`);
   const totals = calcTotals();
   const email = copyEmail.value.trim();
+  const orderRef = makeOrderRef();
   const data = {
     access_key: ACCESS_KEY,
-    subject: "New order from " + document.getElementById("doctor").value,
+    subject: "New order " + orderRef + " from " + document.getElementById("doctor").value,
+    order_ref: orderRef,
     doctor: document.getElementById("doctor").value,
     contact: document.getElementById("contact").value,
     province: provinceEl.value,
@@ -283,7 +293,35 @@ form.addEventListener("submit", async (e) => {
     });
     const result = await res.json();
     if (!result.success) throw new Error();
+
+    // Also save the order to the Google Sheet (the email above is still the safety net)
+    if (SHEET_URL) {
+      fetch(SHEET_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          order_ref: orderRef,
+          date: new Date().toISOString(),
+          doctor: data.doctor,
+          province: data.province,
+          subtotal: totals.subtotal,
+          shipping: totals.shipping,
+          total: totals.total,
+          lines: orderLines.map(l => ({
+            code: l.code,
+            type: l.p.name,
+            category: l.p.name === "Implant" ? "Implant" : "Component",
+            qty: l.qty,
+            price: l.p.price,
+            line_total: l.p.price * l.qty
+          }))
+        })
+      }).catch(() => {});
+    }
+
     showQuote({
+      orderRef,
       doctor: data.doctor,
       email,
       wantsCopy: !!email && sendCopy.checked,
