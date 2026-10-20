@@ -4,6 +4,11 @@ body { margin:0; font-family: system-ui, sans-serif; color:var(--ink); backgroun
 main { max-width:720px; margin:0 auto; padding:1.5rem 1rem 4rem; }
 h1 { margin:0 0 .25rem; }
 .sub { margin:0 0 1.5rem; color:#51615f; }
+.info-sheet { display:flex; flex-direction:column; gap:.15rem; margin:0 0 1.5rem; padding:.85rem 1rem; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--teal); text-decoration:none; }
+.info-sheet:hover { border-color:var(--teal); }
+.info-sheet:focus-visible { outline:3px solid #99d5cf; outline-offset:2px; }
+.info-sheet-title { font-weight:600; }
+.info-sheet-action { color:#51615f; font-size:.9rem; }
 label { display:block; font-weight:600; margin:1rem 0 .25rem; }
 input, textarea, select { width:100%; padding:.6rem; border:1px solid var(--line); border-radius:6px; font:inherit; background:#fff; }
 input:focus, textarea:focus, select:focus, button:focus-visible { outline:3px solid #99d5cf; }
@@ -13,6 +18,14 @@ button { font:inherit; border:0; border-radius:6px; padding:.65rem 1rem; cursor:
 .ghost { background:#fff; border:1px solid var(--line); }
 .remove { background:#fff; border:1px solid var(--line); padding:.5rem; }
 #status { margin-top:1rem; font-weight:600; }
+.product-picker { position:relative; min-width:0; }
+.product-picker input.product-choice { width:100%; padding-right:3rem; }
+.product-picker-toggle { position:absolute; top:1px; right:1px; bottom:1px; width:2.5rem; padding:.25rem; border-left:1px solid var(--line); border-radius:0 5px 5px 0; background:#fff; color:var(--ink); }
+.product-picker-toggle:hover { background:var(--bg); }
+.product-picker-list { position:absolute; z-index:2; top:calc(100% + 4px); left:0; right:0; max-height:240px; overflow-y:auto; margin:0; padding:.25rem; list-style:none; border:1px solid var(--line); border-radius:6px; background:#fff; box-shadow:0 4px 12px #1d2b2a22; }
+.product-picker-option { padding:.5rem .6rem; border-radius:4px; cursor:pointer; }
+.product-picker-option:hover { background:var(--bg); }
+.product-picker-status { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
 #shipNote { margin-top:.5rem; padding:.6rem .8rem; border-radius:6px; background:#fff8e1; border:1px solid #f0d98a; display:none; }
 #shipNote.free { background:#e8f5ee; border-color:#a7d7b9; }
 .ok { color:#166534; } .err { color:#b91c1c; }

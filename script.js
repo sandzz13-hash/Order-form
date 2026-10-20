@@ -139,9 +139,9 @@ function makeOrderRef() {
 // Reads the product lines on the form (ignores empty or zero-quantity lines)
 function getOrderLines() {
   return [...lines.children].map(r => {
-    const code = r.querySelector("select").value;
-    const qty = parseInt(r.querySelector("input").value, 10) || 0;
-    const p = PRODUCTS.find(x => x.code === code);
+    const p = getRowProduct(r);
+    const code = p ? p.code : "";
+    const qty = parseInt(r.querySelector('input[type="number"]').value, 10) || 0;
     return { code, qty, p };
   }).filter(l => l.p && l.qty > 0);
 }
@@ -185,16 +185,164 @@ function updateNote() {
 form.addEventListener("input", updateNote);
 form.addEventListener("change", updateNote);
 
+function productLabel(product) {
+  return `${product.code} - ${product.name}${SHOW_PRICES ? " (R" + product.price + ")" : ""}`;
+}
+
+function getRowProduct(row) {
+  const code = row.querySelector(".product-picker").dataset.selectedCode;
+  return PRODUCTS.find(p => p.code === code) || null;
+}
+
+let productPickerCount = 0;
+
+function productControl() {
+  const picker = document.createElement("div");
+  picker.className = "product-picker";
+  const listId = `product-picker-list-${++productPickerCount}`;
+
+  const input = document.createElement("input");
+  input.type = "search";
+  input.className = "product-choice";
+  input.placeholder = "Search products";
+  input.setAttribute("aria-label", "Search products by code or type");
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-autocomplete", "list");
+  input.setAttribute("aria-expanded", "false");
+  input.setAttribute("aria-controls", listId);
+  input.required = true;
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "product-picker-toggle";
+  toggle.setAttribute("aria-label", "Show all products");
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.innerHTML = '<span aria-hidden="true">&#9662;</span>';
+
+  const list = document.createElement("ul");
+  list.className = "product-picker-list";
+  list.id = listId;
+  list.setAttribute("role", "listbox");
+  list.hidden = true;
+
+  const pickerStatus = document.createElement("div");
+  pickerStatus.className = "product-picker-status";
+  pickerStatus.setAttribute("role", "status");
+  pickerStatus.setAttribute("aria-live", "polite");
+
+  let showingAll = false;
+  let activeIndex = -1;
+  const setOpen = open => {
+    list.hidden = !open;
+    input.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-expanded", String(open));
+    if (!open) {
+      activeIndex = -1;
+      input.removeAttribute("aria-activedescendant");
+    }
+  };
+
+  const showProducts = (query = "", showAll = false) => {
+    showingAll = showAll;
+    activeIndex = -1;
+    const normalizedQuery = query.trim().toLowerCase();
+    const matches = showAll || !normalizedQuery
+      ? PRODUCTS
+      : PRODUCTS.filter(p => `${p.code} ${p.name}`.toLowerCase().includes(normalizedQuery));
+    list.replaceChildren();
+    matches.forEach((product, index) => {
+      const option = document.createElement("li");
+      option.className = "product-picker-option";
+      option.id = `${listId}-option-${index}`;
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", "false");
+      option.textContent = productLabel(product);
+      option.addEventListener("mousedown", event => event.preventDefault());
+      option.addEventListener("click", () => {
+        input.value = productLabel(product);
+        picker.dataset.selectedCode = product.code;
+        input.setCustomValidity("");
+        pickerStatus.textContent = "";
+        setOpen(false);
+        form.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      list.appendChild(option);
+    });
+    pickerStatus.textContent = matches.length
+      ? `${matches.length} product${matches.length === 1 ? "" : "s"} available.`
+      : "No products match your search.";
+    setOpen(true);
+  };
+
+  const setActiveOption = index => {
+    const options = list.querySelectorAll('[role="option"]');
+    if (!options.length) return;
+    activeIndex = (index + options.length) % options.length;
+    options.forEach((option, optionIndex) => {
+      const isActive = optionIndex === activeIndex;
+      option.setAttribute("aria-selected", String(isActive));
+      if (isActive) {
+        input.setAttribute("aria-activedescendant", option.id);
+        option.scrollIntoView({ block: "nearest" });
+      }
+    });
+  };
+
+  input.addEventListener("focus", () => {
+    if (list.hidden) showProducts(input.value);
+  });
+  input.addEventListener("input", () => {
+    picker.dataset.selectedCode = "";
+    input.setCustomValidity("Choose a product from the suggestions.");
+    showProducts(input.value);
+  });
+  input.addEventListener("keydown", event => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (list.hidden) showProducts(input.value);
+      setActiveOption(activeIndex + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (list.hidden) showProducts(input.value);
+      setActiveOption(activeIndex < 0 ? list.children.length - 1 : activeIndex - 1);
+    } else if (event.key === "Enter" && !list.hidden && activeIndex >= 0) {
+      event.preventDefault();
+      list.children[activeIndex].click();
+    } else if (event.key === "Escape") {
+      setOpen(false);
+    }
+  });
+  toggle.addEventListener("click", () => {
+    if (list.hidden || !showingAll) {
+      showProducts("", true);
+      input.focus();
+    } else {
+      setOpen(false);
+    }
+  });
+  picker.addEventListener("focusout", event => {
+    if (!picker.contains(event.relatedTarget)) setOpen(false);
+  });
+
+  picker.append(input, toggle, list, pickerStatus);
+  return picker;
+}
+
 function addLine() {
   const row = document.createElement("div");
   row.className = "row";
-  const options = PRODUCTS.map(p =>
-    `<option value="${p.code}">${p.code} - ${p.name}${SHOW_PRICES ? " (R" + p.price + ")" : ""}</option>`
-  ).join("");
-  row.innerHTML = `
-    <select aria-label="Product" required><option value="">Select a product</option>${options}</select>
-    <input type="number" min="1" value="1" aria-label="Quantity" required>
-    <button type="button" class="remove" aria-label="Remove product">&times;</button>`;
+  const quantity = document.createElement("input");
+  quantity.type = "number";
+  quantity.min = "1";
+  quantity.value = "1";
+  quantity.setAttribute("aria-label", "Quantity");
+  quantity.required = true;
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "remove";
+  remove.textContent = "\u00d7";
+  remove.setAttribute("aria-label", "Remove product");
+  row.append(productControl(), quantity, remove);
   row.querySelector(".remove").onclick = () => { if (lines.children.length > 1) { row.remove(); updateNote(); } };
   lines.appendChild(row);
 }
